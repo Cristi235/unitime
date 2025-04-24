@@ -18,11 +18,6 @@ export const navLinks = [
       id: 4,
       url: '#',
       label: 'Profile',
-    },
-    {
-        id: 5,
-        url: '#',
-        label: 'Profile',
-      },
+    }
   ]
   

@@ -1,8 +1,8 @@
 "use client";
 
 import { usePathname } from "next/navigation";
-import Navbar from "@/components/Home/Navbar/Navbar";
 import { ReactNode } from "react";
+import ResponsiveNavbar from "@/components/Home/Navbar/ResponsiveNavbar";
 
 export default function LayoutWrapper({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -10,7 +10,7 @@ export default function LayoutWrapper({ children }: { children: ReactNode }) {
 
   return (
     <>
-      {!hideNavbar && <Navbar />}
+      {!hideNavbar && <ResponsiveNavbar />}
       <main>{children}</main> {/* Asigură-te că conținutul fiecărei pagini se află aici */}
     </>
   );
