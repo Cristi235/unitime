@@ -1,23 +1,40 @@
 "use client";
 import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { div } from "framer-motion/client";
-import { HiAcademicCap } from "react-icons/hi2";
-import { HiBars3BottomRight } from "react-icons/hi2";
+import { HiAcademicCap, HiBars3BottomRight } from "react-icons/hi2";
 import { navLinks } from "@/constant/constant";
 import Link from "next/link";
 
-type Props ={
-  openNav:()=>void
-}
+type Props = {
+  openNav: () => void;
+};
 
-const Navbar = ({openNav}:Props) => {
+const containerVariants = {
+  hidden: { opacity: 0, y: -20 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.6,
+      ease: "easeOut",
+      when: "beforeChildren",
+      staggerChildren: 0.15,
+      delayChildren: 0.2,
+    },
+  },
+};
 
-const [isScrolled, setIsScrolled] = useState(false);
+const itemVariants = {
+  hidden: { opacity: 0, y: 10 },
+  show: { opacity: 1, y: 0 },
+};
+
+const Navbar = ({ openNav }: Props) => {
+  const [isScrolled, setIsScrolled] = useState(false);
 
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY >=50) {
+      if (window.scrollY >= 50) {
         setIsScrolled(true);
       } else {
         setIsScrolled(false);
@@ -25,50 +42,64 @@ const [isScrolled, setIsScrolled] = useState(false);
     };
 
     window.addEventListener("scroll", handleScroll);
-
-    // Curățăm listener-ul 
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
   return (
-    <div className={` ${isScrolled ? "gb-blue-950 shadow-md" : "fixed"} transition-all duration-200 h-[12vh] z[1000] fixed w-full  `}>
-       <div className="flex items-center h-full justify-between w-[90%] xl:w-[80%] mx-auto">
-          {/*logo*/}
-          <div className="flex items-center space-x-2">
-            <div className="w-10 h-10 bg-rose-500 rounded-full flex items-center justify-center felx-col">
+    <motion.div
+      variants={containerVariants}
+      initial="hidden"
+      animate="show"
+      className={`${
+        isScrolled
+          ? "bg-gradient-to-r from-blue-900 via-blue-950 to-black shadow-lg backdrop-blur-md"
+          : "bg-transparent"
+      } transition-all duration-300 h-[12vh] z-[1000] fixed w-full`}
+    >
+      <div className="flex items-center h-full justify-between w-[90%] xl:w-[80%] mx-auto">
+        {/* Logo */}
+        <motion.div variants={itemVariants} className="flex items-center space-x-3">
+          <div className="w-11 h-11 bg-rose-500 rounded-full flex items-center justify-center shadow-md">
             <HiAcademicCap className="w-6 h-6 text-white" />
-            </div>
-            <h1 className="text-xl md:text-2x1 text-white uppercase font-bold">
-              UniTime
-            </h1>
           </div>
+          <h1 className="text-xl md:text-2xl text-white uppercase font-bold tracking-wider">
+            UniTime
+          </h1>
+        </motion.div>
 
-          {/*navlinks */}
+        {/* Nav Links */}
+        <motion.div
+          variants={itemVariants}
+          className="hidden lg:flex items-center space-x-10"
+        >
+          {navLinks.map((link) => (
+            <motion.div key={link.id} variants={itemVariants}>
+              <Link href={link.url}>
+                <p className="relative text-white text-base font-medium after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-0 after:bg-rose-400 hover:after:w-full after:transition-all after:duration-300">
+                  {link.label}
+                </p>
+              </Link>
+            </motion.div>
+          ))}
+        </motion.div>
 
-          <div className="hidden lg:flex items-center space-x-10">
-            {navLinks.map((link) =>{
-              return (
-                <Link href={link.url} key={link.id}>
-                  <p className="relative text-white text-base font-medium w-fit block after:block after:content-after:hover:scale-x-100 after:transition duration-100 after:origin-right"> 
-                    {link.label}
-                  </p>
-                </Link>
-              );
-            }
-          )}
-          </div>
-
-          {/*buttons */}
-        <div className="flex items-center space-x-4">
-          <button className="md:px-12 md:py-2.5 px-8 text-black text-base bg-white hover:bg-gray-200 transition-all duration-200 rounded-lg">
+        {/* Button + Menu */}
+        <motion.div variants={itemVariants} className="flex items-center space-x-4">
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.97 }}
+            className="md:px-12 md:py-2.5 px-8 py-2 text-white text-sm bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl shadow-md hover:opacity-90 transition-all duration-200"
+          >
             Buton important
-          </button>
+          </motion.button>
 
-          {/*Burger menu */}
-          <HiBars3BottomRight onClick={openNav} className="w-8 h-8 cursor-pointer text-white lg:hidden"/>
-        </div>
+          <HiBars3BottomRight
+            onClick={openNav}
+            className="w-8 h-8 cursor-pointer text-white lg:hidden"
+          />
+        </motion.div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
