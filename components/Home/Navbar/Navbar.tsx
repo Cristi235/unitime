@@ -4,33 +4,34 @@ import { motion } from "framer-motion";
 import { HiAcademicCap, HiBars3BottomRight } from "react-icons/hi2";
 import { navLinks } from "@/constant/constant";
 import Link from "next/link";
+import { usePathname } from "next/navigation"; // 👈 Adaugă asta
 
 type Props = {
   openNav: () => void;
 };
 
-const containerVariants = {
-  hidden: { opacity: 0, y: -20 },
-  show: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.6,
-      ease: "easeOut",
-      when: "beforeChildren",
-      staggerChildren: 0.15,
-      delayChildren: 0.2,
-    },
-  },
-};
-
-const itemVariants = {
-  hidden: { opacity: 0, y: 10 },
-  show: { opacity: 1, y: 0 },
-};
-
 const Navbar = ({ openNav }: Props) => {
   const [isScrolled, setIsScrolled] = useState(false);
+  const pathname = usePathname(); 
+  const containerVariants = {
+    hidden: { opacity: 0, y: -20 },
+    show: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.6,
+        ease: "easeOut",
+        when: "beforeChildren",
+        staggerChildren: 0.15,
+        delayChildren: 0.2,
+      },
+    },
+  };
+  
+  const itemVariants = {
+    hidden: { opacity: 0, y: 10 },
+    show: { opacity: 1, y: 0 },
+  };
 
   useEffect(() => {
     const handleScroll = () => {
@@ -74,8 +75,16 @@ const Navbar = ({ openNav }: Props) => {
         >
           {navLinks.map((link) => (
             <motion.div key={link.id} variants={itemVariants}>
-              <Link href={link.url}>
-                <p className="relative text-white text-base font-medium after:absolute after:bottom-0 after:left-0 after:h-[2px] after:w-0 after:bg-rose-400 hover:after:w-full after:transition-all after:duration-300">
+              <Link href={link.url} className="group">
+                <p
+                  className={`relative text-white text-base font-medium after:absolute after:bottom-0 after:left-1/2 after:-translate-x-1/2 after:h-[2px] after:bg-rose-400 after:transition-all after:duration-300 
+                    ${
+                      pathname.replace(/\/$/, "") === link.url.replace(/\/$/, "")
+                        ? "after:w-full"
+                        : "after:w-0 group-hover:after:w-full"
+                    }
+                  `}
+                >
                   {link.label}
                 </p>
               </Link>

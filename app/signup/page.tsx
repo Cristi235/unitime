@@ -8,7 +8,7 @@ export default function SignupPage() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState(""); // Câmp pentru confirmare parolă
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [error, setError] = useState("");
   const [emailError, setEmailError] = useState("");
 
