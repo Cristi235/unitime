@@ -23,16 +23,6 @@ export const navLinks = [
         id: 5,
         url: '/events',
         label: 'Events',
-      },
-    {
-      id: 6,
-      url: '/settings',
-      label: 'Settings',
-    },
-    {
-      id: 7,
-      url: '/profile',
-      label: 'Profile',
-    }
+      }
   ]
   

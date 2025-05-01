@@ -1,162 +1,154 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 
 const DashboardPage = () => {
-  const [userData, setUserData] = useState<any>(null);
-  const [recentActivities, setRecentActivities] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
-  const router = useRouter();
+  const [weather, setWeather] = useState<{
+    name: string;
+    main: { temp: number };
+    weather: { description: string }[];
+  } | null>(null);
+  const [activities, setActivities] = useState<{ id: number; title: string; dueDate: string }[]>([]);
+  const [pomodoroTime, setPomodoroTime] = useState(25 * 60); // 25 minutes in seconds
+  const [isPomodoroRunning, setIsPomodoroRunning] = useState(false);
+  const [weatherError, setWeatherError] = useState(false);
 
+  // Fetch weather data
   useEffect(() => {
-    const simulatedUserData = {
-      username: "Akillu",
-      email: "akillu14@yahoo.com",
-      accountStatus: "activ",
+    const fetchWeather = async () => {
+      try {
+        const response = await fetch(
+          `https://api.openweathermap.org/data/2.5/weather?q=London&units=metric&appid=YOUR_API_KEY`
+        );
+        if (!response.ok) throw new Error("Failed to fetch weather data");
+        const data = await response.json();
+        setWeather(data);
+      } catch (error) {
+        console.error(error);
+        setWeatherError(true);
+      }
     };
-
-    const simulatedActivities = [
-      { description: "Ai schimbat parola contului", timestamp: "Acum 2 zile" },
-      { description: "Ai modificat preferințele de notificare", timestamp: "Acum 5 zile" },
-      { description: "Ai actualizat profilul", timestamp: "Acum 1 săptămână" },
-    ];
-
-    setUserData(simulatedUserData);
-    setRecentActivities(simulatedActivities);
-
-    setTimeout(() => {
-      setLoading(false);
-    }, 1500); // Simulăm un loading de 1.5 secunde
+    fetchWeather();
   }, []);
 
-  const activityData = [
-    { name: "Luni", activitate: 2 },
-    { name: "Marți", activitate: 1 },
-    { name: "Miercuri", activitate: 3 },
-    { name: "Joi", activitate: 4 },
-    { name: "Vineri", activitate: 2 },
-    { name: "Sâmbătă", activitate: 5 },
-    { name: "Duminică", activitate: 3 },
-  ];
+  // Fetch activities (mocked for now)
+  useEffect(() => {
+    const mockActivities = [
+      { id: 1, title: "Math Homework", dueDate: "2025-05-01" },
+      { id: 2, title: "Group Project Meeting", dueDate: "2025-05-03" },
+      { id: 3, title: "Physics Quiz", dueDate: "2025-05-05" },
+    ];
+    setActivities(mockActivities);
+  }, []);
 
-  if (loading) {
-    return (
-      <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-100 to-purple-200 dark:from-gray-900 dark:to-gray-800">
-        <motion.div
-          className="w-32 h-2 rounded-full bg-gray-300 overflow-hidden"
-          initial={{ width: 0 }}
-          animate={{ width: "8rem" }}
-          transition={{ duration: 1.5 }}
-        >
-          <motion.div
-            className="h-full bg-blue-500"
-            initial={{ width: 0 }}
-            animate={{ width: "100%" }}
-            transition={{ duration: 1.5 }}
-          />
-        </motion.div>
-      </main>
-    );
-  }
+  // Pomodoro Timer Logic
+  useEffect(() => {
+    let timer: NodeJS.Timeout | undefined;
+    if (isPomodoroRunning && pomodoroTime > 0) {
+      timer = setInterval(() => {
+        setPomodoroTime((prevTime) => prevTime - 1);
+      }, 1000);
+    } else if (pomodoroTime === 0) {
+      setIsPomodoroRunning(false);
+      alert("Pomodoro session complete!");
+    }
+    return () => clearInterval(timer);
+  }, [isPomodoroRunning, pomodoroTime]);
+
+  const formatTime = (timeInSeconds: number) => {
+    const minutes = Math.floor(timeInSeconds / 60);
+    const seconds = timeInSeconds % 60;
+    return `${minutes.toString().padStart(2, "0")}:${seconds
+      .toString()
+      .padStart(2, "0")}`;
+  };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-indigo-100 to-purple-200 dark:from-gray-900 dark:to-gray-800 flex flex-col items-center justify-center px-6 py-12 pt-32 space-y-10">
-      {/* Welcome section */}
+    <main className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white flex flex-col items-center pt-20 px-6 py-12">
+      {/* Welcome Section */}
       <motion.div
-        className="text-center max-w-lg"
+        className="text-center max-w-4xl px-6 font-sans mb-12"
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
       >
-        <h1 className="text-4xl md:text-5xl font-extrabold text-gray-800 dark:text-white mb-4">
-          Bun venit, {userData.username}!
+        <h1 className="text-5xl md:text-6xl font-extrabold text-white mb-4">
+          Welcome to Your Dashboard
         </h1>
-        <p className="text-lg text-gray-700 dark:text-gray-300 mb-8">
-          Iată statistici și activități recente.
+        <p className="text-lg text-gray-300 leading-relaxed">
+          Stay on top of your tasks, track your progress, and achieve your goals with ease.
         </p>
       </motion.div>
 
-      {/* Recent activities */}
+      {/* Features Section */}
       <motion.div
-        className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-md"
+        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 w-full max-w-7xl"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.2, duration: 0.5 }}
       >
-        <h2 className="text-2xl font-semibold text-gray-800 dark:text-white mb-6">
-          Activitățile tale recente
-        </h2>
-        <ul className="space-y-4">
-          {recentActivities.map((activity, index) => (
-            <motion.li
-              key={index}
-              className="p-4 bg-gray-100 dark:bg-gray-700 rounded-xl shadow-sm"
-              whileHover={{ scale: 1.03 }}
-              transition={{ type: "spring", stiffness: 300 }}
+        {/* Live Weather */}
+        <div className="bg-gray-800 p-6 rounded-2xl shadow-lg flex flex-col items-center">
+          <h3 className="text-lg font-semibold text-white mb-4">Live Weather</h3>
+          {weatherError ? (
+            <p className="text-red-500">Failed to load weather data.</p>
+          ) : weather ? (
+            <div className="text-center">
+              <p className="text-2xl font-bold">{weather.name}</p>
+              <p className="text-lg">{weather.main.temp}°C</p>
+              <p className="text-sm text-gray-400">{weather.weather[0].description}</p>
+            </div>
+          ) : (
+            <p className="text-gray-400">Loading...</p>
+          )}
+        </div>
+
+        {/* Upcoming Activities */}
+        <div className="bg-gray-800 p-6 rounded-2xl shadow-lg flex flex-col items-center">
+          <h3 className="text-lg font-semibold text-white mb-4">Upcoming Activities</h3>
+          {activities.length > 0 ? (
+            <ul className="text-gray-400 text-sm">
+              {activities.map((activity) => (
+                <li key={activity.id} className="mb-2">
+                  <span className="font-bold text-white">{activity.title}</span> -{" "}
+                  <span>{activity.dueDate}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-gray-400">No activities found.</p>
+          )}
+        </div>
+
+        {/* Pomodoro Timer */}
+        <div className="bg-gray-800 p-6 rounded-2xl shadow-lg flex flex-col items-center">
+          <h3 className="text-lg font-semibold text-white mb-4">Pomodoro Timer</h3>
+          <p className="text-4xl font-bold mb-4">{formatTime(pomodoroTime)}</p>
+          <div className="flex gap-4">
+            <button
+              onClick={() => setIsPomodoroRunning(true)}
+              className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-lg text-white"
             >
-              <p className="text-sm text-gray-700 dark:text-gray-300">
-                {activity.description}
-              </p>
-              <span className="text-xs text-gray-500 dark:text-gray-400">
-                {activity.timestamp}
-              </span>
-            </motion.li>
-          ))}
-        </ul>
-      </motion.div>
-
-      {/* Activity chart */}
-      <motion.div
-        className="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-2xl w-full max-w-md"
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.4, duration: 0.5 }}
-      >
-        <h2 className="text-xl font-semibold text-gray-800 dark:text-white mb-4">
-          Activitate săptămânală
-        </h2>
-        <ResponsiveContainer width="100%" height={200}>
-          <LineChart data={activityData}>
-            <XAxis dataKey="name" stroke="#8884d8" />
-            <YAxis allowDecimals={false} stroke="#8884d8" />
-            <Tooltip />
-            <Line
-              type="monotone"
-              dataKey="activitate"
-              stroke="#6366f1"
-              strokeWidth={3}
-              activeDot={{ r: 8 }}
-            />
-          </LineChart>
-        </ResponsiveContainer>
-      </motion.div>
-
-      {/* Buttons */}
-      <motion.div
-        className="flex flex-col sm:flex-row gap-4 mt-6"
-        initial={{ opacity: 0, y: 40 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.6, duration: 0.6 }}
-      >
-        <button
-          onClick={() => router.push("/settings")}
-          className="py-2 px-6 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-semibold shadow-md"
-        >
-          Setări cont
-        </button>
-        <button
-          onClick={() => {
-            // Simulare logout
-            localStorage.removeItem("userToken");
-            router.push("/login");
-          }}
-          className="py-2 px-6 bg-red-500 text-white rounded-lg hover:bg-red-600 transition font-semibold shadow-md"
-        >
-          Deconectare
-        </button>
+              Start
+            </button>
+            <button
+              onClick={() => setIsPomodoroRunning(false)}
+              className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg text-white"
+            >
+              Pause
+            </button>
+            <button
+              onClick={() => {
+                setIsPomodoroRunning(false);
+                setPomodoroTime(25 * 60);
+              }}
+              className="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded-lg text-white"
+            >
+              Reset
+            </button>
+          </div>
+        </div>
       </motion.div>
     </main>
   );

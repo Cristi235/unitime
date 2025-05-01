@@ -1,16 +1,17 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Moon, Sun } from "lucide-react";
 
 export default function ProfilePage() {
+  const defaultPhoto = "https://via.placeholder.com/100"; // Default image URL
   const [userData, setUserData] = useState({
     username: "Andrei123",
     email: "andrei123@email.com",
     registrationDate: "01.02.2024",
     about: "Sunt pasionat de tehnologie și dezvoltare web.",
-    photo: "https://via.placeholder.com/100",
+    photo: defaultPhoto,
   });
 
   const [activityStats] = useState({
@@ -22,6 +23,14 @@ export default function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [theme, setTheme] = useState("light");
   const [saving, setSaving] = useState(false);
+
+  // Load photo from localStorage on component mount
+  useEffect(() => {
+    const savedPhoto = localStorage.getItem("profilePhoto");
+    if (savedPhoto) {
+      setUserData((prevData) => ({ ...prevData, photo: savedPhoto }));
+    }
+  }, []);
 
   const toggleTheme = () => {
     setTheme(theme === "light" ? "dark" : "light");
@@ -37,12 +46,14 @@ export default function ProfilePage() {
     }, 1500);
   };
 
-  const handlePhotoChange = (e) => {
-    const file = e.target.files[0];
+  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
       reader.onload = (event) => {
-        setUserData({ ...userData, photo: event.target.result });
+        const newPhoto = event.target?.result as string;
+        setUserData((prevData) => ({ ...prevData, photo: newPhoto }));
+        localStorage.setItem("profilePhoto", newPhoto); // Save photo to localStorage
       };
       reader.readAsDataURL(file);
     }
@@ -87,14 +98,14 @@ export default function ProfilePage() {
                 {field !== 'about' ? (
                   <input
                     disabled={field === 'registrationDate' || !editing}
-                    value={userData[field]}
+                    value={userData[field as keyof typeof userData]}
                     onChange={(e) => setUserData({ ...userData, [field]: e.target.value })}
                     className={`w-full p-2 mt-1 rounded-md border transition ${editing ? "bg-white dark:bg-gray-800 border-blue-400" : "bg-gray-100 dark:bg-gray-700"}`}
                   />
                 ) : (
                   <textarea
                     disabled={!editing}
-                    value={userData[field]}
+                    value={userData[field as keyof typeof userData]}
                     onChange={(e) => setUserData({ ...userData, about: e.target.value })}
                     className={`w-full p-2 mt-1 rounded-md border h-24 resize-none transition ${editing ? "bg-white dark:bg-gray-800 border-blue-400" : "bg-gray-100 dark:bg-gray-700"}`}
                   />

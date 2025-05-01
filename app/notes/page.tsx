@@ -1,204 +1,203 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import ReactMarkdown from 'react-markdown';
-import {
-  DndContext,
-  closestCenter,
-  MouseSensor,
-  TouchSensor,
-  useSensor,
-  useSensors,
-  DragEndEvent,
-} from '@dnd-kit/core';
-import {
-  arrayMove,
-  SortableContext,
-  rectSortingStrategy,
-  useSortable,
-} from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
-import {
-  FaStar,
-  FaRegStar,
-  FaTrash,
-  FaPlus,
-  FaSearch,
-  FaFileExport,
-} from 'react-icons/fa';
+import React, { useState, useEffect } from "react";
+import { motion } from "framer-motion";
 
-interface Note {
-  id: string;
-  title: string;
-  content: string;
-  tags: string[];
-  favorite: boolean;
-  createdAt: string;
-}
+const NotesPage = () => {
+  const [note, setNote] = useState("");
+  const [notesHistory, setNotesHistory] = useState<
+    { text: string; category: string; subject?: string; date: string; favorite: boolean }[]
+  >([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedSubject, setSelectedSubject] = useState("All");
+  const [selectedDate, setSelectedDate] = useState("");
+  const [categories, setCategories] = useState(["Personal", "Work", "Study", "Other"]);
+  const [subjects, setSubjects] = useState(["Math", "Physics", "Programming", "Other"]);
 
-export default function NotesPage() {
-  const [notes, setNotes] = useState<Note[]>([]);
-  const [search, setSearch] = useState('');
-  const [isFormOpen, setIsFormOpen] = useState(false);
-  const [editId, setEditId] = useState<string | null>(null);
-  const [draft, setDraft] = useState<Omit<Note, 'id' | 'createdAt'>>({
-    title: '',
-    content: '',
-    tags: [],
-    favorite: false,
-  });
-  const [previewMode, setPreviewMode] = useState(false);
-  const [sortByFav, setSortByFav] = useState(false);
-
-  // Load/Save
+  // Load notes from local storage on component mount
   useEffect(() => {
-    const data = localStorage.getItem('notes');
-    if (data) setNotes(JSON.parse(data));
+    const savedNotes = localStorage.getItem("notesHistory");
+    if (savedNotes) {
+      setNotesHistory(JSON.parse(savedNotes));
+    }
   }, []);
+
+  // Save notes history to local storage whenever it changes
   useEffect(() => {
-    localStorage.setItem('notes', JSON.stringify(notes));
-  }, [notes]);
+    localStorage.setItem("notesHistory", JSON.stringify(notesHistory));
+  }, [notesHistory]);
 
-  // Sort & Filter
-  const sorted = [...notes].sort((a, b) =>
-    sortByFav ? Number(b.favorite) - Number(a.favorite) : 0
-  );
-  const filtered = sorted.filter(n =>
-    [n.title, n.content, ...n.tags]
-      .join(' ')
-      .toLowerCase()
-      .includes(search.toLowerCase())
-  );
-
-  // DnD-kit
-  const sensors = useSensors(
-    useSensor(MouseSensor),
-    useSensor(TouchSensor)
-  );
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (over && active.id !== over.id) {
-      setNotes(items => {
-        const oldIndex = items.findIndex(x => x.id === active.id);
-        const newIndex = items.findIndex(x => x.id === over.id);
-        return arrayMove(items, oldIndex, newIndex);
-      });
-    }
+  const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setNote(e.target.value);
   };
 
-  // Form actions
-  const openForm = (note?: Note) => {
-    if (note) {
-      setEditId(note.id);
-      setDraft({
-        title: note.title,
-        content: note.content,
-        tags: note.tags,
-        favorite: note.favorite,
-      });
-    } else {
-      setEditId(null);
-      setDraft({ title: '', content: '', tags: [], favorite: false });
+  const handleSaveNote = () => {
+    if (note.trim() === "") {
+      alert("The note is empty!");
+      return;
     }
-    setPreviewMode(false);
-    setIsFormOpen(true);
+    const newNote = {
+      text: note,
+      category: selectedCategory === "All" ? "Uncategorized" : selectedCategory,
+      subject: selectedSubject === "All" ? undefined : selectedSubject,
+      date: selectedDate || new Date().toISOString().split("T")[0],
+      favorite: false,
+    };
+    setNotesHistory((prev) => [newNote, ...prev]);
+    setNote("");
+    alert("Note saved!");
   };
-  const saveNote = () => {
-    if (editId) {
-      setNotes(n => n.map(x => x.id === editId ? { ...x, ...draft } : x));
-    } else {
-      const newNote: Note = {
-        ...draft,
-        id: Date.now().toString(),
-        createdAt: new Date().toISOString(),
-      };
-      setNotes(n => [newNote, ...n]);
-    }
-    setIsFormOpen(false);
+
+  const handleDeleteNote = (index: number) => {
+    setNotesHistory((prev) => prev.filter((_, i) => i !== index));
   };
-  const deleteNote = (id: string) => setNotes(n => n.filter(x => x.id !== id));
-  const toggleFav = (id: string) => setNotes(n => n.map(x => x.id === id ? { ...x, favorite: !x.favorite } : x));
-  const exportNotes = () => {
-    const blob = new Blob([JSON.stringify(notes, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a'); a.href = url; a.download = 'notes.json'; a.click(); URL.revokeObjectURL(url);
+
+  const handleToggleFavorite = (index: number) => {
+    setNotesHistory((prev) =>
+      prev.map((note, i) =>
+        i === index ? { ...note, favorite: !note.favorite } : note
+      )
+    );
   };
+
+  const filteredNotes = notesHistory.filter(
+    (note) =>
+      (selectedCategory === "All" || note.category === selectedCategory) &&
+      (selectedSubject === "All" || note.subject === selectedSubject) &&
+      (!selectedDate || note.date === selectedDate) &&
+      note.text.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
-    <main className="pt-[12vh] p-6 bg-indigo-50 dark:bg-gray-900 min-h-screen text-gray-800 dark:text-gray-100">
-      {/* Header Controls */}
-      <div className="flex flex-wrap justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Notițe</h1>
-        <div className="flex space-x-2">
-          <button onClick={() => openForm()} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded">
-            <FaPlus className="inline mr-1"/>Adaugă
-          </button>
-          <button onClick={exportNotes} className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded">
-            <FaFileExport className="inline mr-1"/>Export
-          </button>
-          <button onClick={() => setSortByFav(!sortByFav)} className="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded">
-            {sortByFav ? 'Toate' : 'Favorite'}
+    <main className="min-h-screen bg-gray-900 text-white flex flex-col items-center pt-32 px-6">
+      <motion.div
+        className="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-4xl"
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <h1 className="text-3xl font-bold text-white mb-8 text-center">
+          My Notes
+        </h1>
+
+        {/* Notes Editor */}
+        <textarea
+          value={note}
+          onChange={handleTextChange}
+          className="w-full h-64 p-4 text-lg bg-gray-700 text-white rounded-lg focus:outline-none"
+          placeholder="Write your notes here..."
+        />
+
+        {/* Category and Subject Selector */}
+        <div className="mt-4 flex gap-4">
+          <div>
+            <label className="text-white">Category:</label>
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              className="ml-2 p-2 bg-gray-700 text-white rounded-lg"
+            >
+              <option value="All">All</option>
+              {categories.map((category, index) => (
+                <option key={index} value={category}>
+                  {category}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-white">Subject:</label>
+            <select
+              value={selectedSubject}
+              onChange={(e) => setSelectedSubject(e.target.value)}
+              className="ml-2 p-2 bg-gray-700 text-white rounded-lg"
+            >
+              <option value="All">All</option>
+              {subjects.map((subject, index) => (
+                <option key={index} value={subject}>
+                  {subject}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="text-white">Date:</label>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              className="ml-2 p-2 bg-gray-700 text-white rounded-lg"
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-between items-center mt-6">
+          {/* Save Note */}
+          <button
+            onClick={handleSaveNote}
+            className="px-6 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600"
+          >
+            Save Note
           </button>
         </div>
-      </div>
 
-      {/* Search */}
-      <div className="mb-6 relative">
-        <FaSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500"/>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Caută notițe..." className="w-full pl-10 pr-3 py-2 rounded border bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-100"/>
-      </div>
+        {/* Search Notes */}
+        <div className="mt-8">
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search notes..."
+            className="w-full p-3 bg-gray-700 text-white rounded-lg focus:outline-none"
+          />
+        </div>
 
-      {/* Form */}
-      {isFormOpen && (
-        <motion.div initial={{opacity:0,y:-10}} animate={{opacity:1,y:0}} className="mb-6 p-4 bg-white dark:bg-gray-800 rounded shadow">
-          <div className="flex space-x-2 mb-4">
-            <button onClick={()=>setPreviewMode(false)} className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded">Edit</button>
-            <button onClick={()=>setPreviewMode(true)} className="px-3 py-1 bg-gray-200 dark:bg-gray-700 rounded">Preview</button>
-          </div>
-          {!previewMode ? (
-            <>
-              <input type="text" placeholder="Titlu" value={draft.title} onChange={e=>setDraft({...draft,title:e.target.value})} className="w-full mb-3 p-2 border rounded bg-gray-100 dark:bg-gray-700"/>
-              <textarea placeholder="Conținut" value={draft.content} onChange={e=>setDraft({...draft,content:e.target.value})} className="w-full mb-3 p-2 border rounded h-32 bg-gray-100 dark:bg-gray-700"/>
-              <input type="text" placeholder="Etichete, comma" value={draft.tags.join(',')} onChange={e=>setDraft({...draft,tags:e.target.value.split(',').map(t=>t.trim())})} className="w-full mb-3 p-2 border rounded bg-gray-100 dark:bg-gray-700"/>
-            </>
+        {/* Notes History */}
+        <div className="mt-8">
+          <h3 className="text-2xl font-semibold text-white mb-4">
+            Notes History
+          </h3>
+          {filteredNotes.length === 0 ? (
+            <p className="text-gray-400">No saved notes.</p>
           ) : (
-            <div className="mb-3 p-2 border rounded h-32 overflow-auto bg-gray-100 dark:bg-gray-700"><ReactMarkdown>{draft.content}</ReactMarkdown></div>
+            <ul className="space-y-4">
+              {filteredNotes.map((savedNote, index) => (
+                <li
+                  key={index}
+                  className="bg-gray-700 p-4 rounded-lg flex justify-between items-center"
+                >
+                  <div>
+                    <p className="text-white truncate">{savedNote.text}</p>
+                    <p className="text-gray-400 text-sm">
+                      {savedNote.category} - {savedNote.subject || "No Subject"} -{" "}
+                      {savedNote.date}
+                    </p>
+                  </div>
+                  <div className="flex gap-4">
+                    <button
+                      onClick={() => handleToggleFavorite(index)}
+                      className={`text-yellow-400 hover:text-yellow-500 ${
+                        savedNote.favorite ? "font-bold" : ""
+                      }`}
+                    >
+                      {savedNote.favorite ? "★" : "☆"}
+                    </button>
+                    <button
+                      onClick={() => handleDeleteNote(index)}
+                      className="text-red-400 hover:text-red-500"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                </li>
+              ))}
+            </ul>
           )}
-          <div className="flex justify-end space-x-2">
-            <button onClick={()=>setIsFormOpen(false)} className="px-4 py-2 bg-red-500 text-white rounded">Anulează</button>
-            <button onClick={saveNote} className="px-4 py-2 bg-indigo-600 text-white rounded">Salvează</button>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Grid */}
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={filtered.map(n=>n.id)} strategy={rectSortingStrategy}>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {filtered.map(note=><NoteCard key={note.id} note={note} onEdit={()=>openForm(note)} onDelete={()=>deleteNote(note.id)} onToggle={()=>toggleFav(note.id)}/>)}
-          </div>
-        </SortableContext>
-      </DndContext>
+        </div>
+      </motion.div>
     </main>
   );
-}
+};
 
-function NoteCard({note,onEdit,onDelete,onToggle}:{note:Note;onEdit:()=>void;onDelete:()=>void;onToggle:()=>void}){
-  const {attributes,listeners,setNodeRef,transform,transition} = useSortable({id:note.id});
-  const style = {transform:CSS.Transform.toString(transform),transition};
-  return (
-    <motion.div ref={setNodeRef} style={style} initial={{opacity:0,scale:0.9}} animate={{opacity:1,scale:1}} className="p-4 bg-white dark:bg-gray-800 rounded shadow relative cursor-pointer" {...attributes} {...listeners} onClick={onEdit}>
-      <div className="flex justify-between items-start">
-        <h3 className="font-semibold text-gray-800 dark:text-gray-200">{note.title}</h3>
-        <div className="flex space-x-1">
-          <button onClick={e=>{e.stopPropagation();onToggle();}} className="text-yellow-500"><FaStar/></button>
-          <button onClick={e=>{e.stopPropagation();onDelete();}} className="text-red-500"><FaTrash/></button>
-        </div>
-      </div>
-      <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-3 my-2">{note.content}</p>
-      <div className="flex flex-wrap gap-1 mb-2">{note.tags.map(t=><span key={t} className="px-2 py-0.5 text-xs bg-blue-100 dark:bg-blue-700 text-blue-800 dark:text-blue-200 rounded">{t}</span>)}</div>
-      <p className="text-xs text-gray-500 dark:text-gray-400">{new Date(note.createdAt).toLocaleString()}</p>
-    </motion.div>
-  );
-}
+export default NotesPage;
