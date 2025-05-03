@@ -10,7 +10,7 @@ const DashboardPage = () => {
     weather: { description: string }[];
   } | null>(null);
   const [activities, setActivities] = useState<{ id: number; title: string; dueDate: string }[]>([]);
-  const [pomodoroTime, setPomodoroTime] = useState(25 * 60); // 25 minutes in seconds
+  const [pomodoroTime, setPomodoroTime] = useState(25 * 60);
   const [isPomodoroRunning, setIsPomodoroRunning] = useState(false);
   const [weatherError, setWeatherError] = useState(false);
 

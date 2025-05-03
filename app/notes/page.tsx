@@ -14,6 +14,8 @@ const NotesPage = () => {
   const [selectedDate, setSelectedDate] = useState("");
   const [categories, setCategories] = useState(["Personal", "Work", "Study", "Other"]);
   const [subjects, setSubjects] = useState(["Math", "Physics", "Programming", "Other"]);
+  const [filterFavorites, setFilterFavorites] = useState(false);
+  const [editIndex, setEditIndex] = useState<number | null>(null);
 
   // Load notes from local storage on component mount
   useEffect(() => {
@@ -37,16 +39,38 @@ const NotesPage = () => {
       alert("The note is empty!");
       return;
     }
-    const newNote = {
-      text: note,
-      category: selectedCategory === "All" ? "Uncategorized" : selectedCategory,
-      subject: selectedSubject === "All" ? undefined : selectedSubject,
-      date: selectedDate || new Date().toISOString().split("T")[0],
-      favorite: false,
-    };
-    setNotesHistory((prev) => [newNote, ...prev]);
+
+    if (editIndex !== null) {
+      // Update existing note
+      setNotesHistory((prev) =>
+        prev.map((n, i) =>
+          i === editIndex
+            ? {
+                ...n,
+                text: note,
+                category: selectedCategory === "All" ? "Uncategorized" : selectedCategory,
+                subject: selectedSubject === "All" ? undefined : selectedSubject,
+                date: selectedDate || new Date().toISOString().split("T")[0],
+              }
+            : n
+        )
+      );
+      setEditIndex(null);
+      alert("Note updated!");
+    } else {
+      // Add new note
+      const newNote = {
+        text: note,
+        category: selectedCategory === "All" ? "Uncategorized" : selectedCategory,
+        subject: selectedSubject === "All" ? undefined : selectedSubject,
+        date: selectedDate || new Date().toISOString().split("T")[0],
+        favorite: false,
+      };
+      setNotesHistory((prev) => [newNote, ...prev]);
+      alert("Note saved!");
+    }
+
     setNote("");
-    alert("Note saved!");
   };
 
   const handleDeleteNote = (index: number) => {
@@ -61,16 +85,32 @@ const NotesPage = () => {
     );
   };
 
+  const handleEditNote = (index: number) => {
+    const noteToEdit = notesHistory[index];
+    setNote(noteToEdit.text);
+    setSelectedCategory(noteToEdit.category);
+    setSelectedSubject(noteToEdit.subject || "All");
+    setSelectedDate(noteToEdit.date);
+    setEditIndex(index);
+  };
+
+  const handleClearAllNotes = () => {
+    if (confirm("Are you sure you want to delete all notes?")) {
+      setNotesHistory([]);
+    }
+  };
+
   const filteredNotes = notesHistory.filter(
     (note) =>
       (selectedCategory === "All" || note.category === selectedCategory) &&
       (selectedSubject === "All" || note.subject === selectedSubject) &&
       (!selectedDate || note.date === selectedDate) &&
+      (!filterFavorites || note.favorite) &&
       note.text.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (
-    <main className="min-h-screen bg-gray-900 text-white flex flex-col items-center pt-32 px-6">
+    <main className="min-h-screen bg-gray-900 text-white flex flex-col items-center pt-32 px-6 pb-24">
       <motion.div
         className="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-4xl"
         initial={{ opacity: 0, y: 40 }}
@@ -138,7 +178,14 @@ const NotesPage = () => {
             onClick={handleSaveNote}
             className="px-6 py-3 bg-blue-500 text-white rounded-xl hover:bg-blue-600"
           >
-            Save Note
+            {editIndex !== null ? "Update Note" : "Save Note"}
+          </button>
+          {/* Clear All Notes */}
+          <button
+            onClick={handleClearAllNotes}
+            className="px-6 py-3 bg-red-500 text-white rounded-xl hover:bg-red-600"
+          >
+            Clear All Notes
           </button>
         </div>
 
@@ -150,6 +197,17 @@ const NotesPage = () => {
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search notes..."
             className="w-full p-3 bg-gray-700 text-white rounded-lg focus:outline-none"
+          />
+        </div>
+
+        {/* Filter by Favorites */}
+        <div className="mt-4 flex items-center">
+          <label className="text-white mr-2">Show Favorites Only:</label>
+          <input
+            type="checkbox"
+            checked={filterFavorites}
+            onChange={(e) => setFilterFavorites(e.target.checked)}
+            className="w-5 h-5"
           />
         </div>
 
@@ -182,6 +240,12 @@ const NotesPage = () => {
                       }`}
                     >
                       {savedNote.favorite ? "★" : "☆"}
+                    </button>
+                    <button
+                      onClick={() => handleEditNote(index)}
+                      className="text-blue-400 hover:text-blue-500"
+                    >
+                      Edit
                     </button>
                     <button
                       onClick={() => handleDeleteNote(index)}

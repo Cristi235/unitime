@@ -1,358 +1,164 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import {
-  format,
-  startOfMonth,
-  endOfMonth,
-  startOfWeek,
-  endOfWeek,
-  addDays,
-  addMonths,
-  subMonths,
-  addWeeks,
-  subWeeks,
-  isSameMonth,
-  isSameDay,
-} from "date-fns";
-import { motion } from "framer-motion";
+import React, { useState, useEffect, useRef } from "react";
+import dynamic from "next/dynamic";
+import dayjs from "dayjs";
 
-interface Task {
-  id: number;
-  date: string;
-  text: string;
-  type: string;
-  priority: string;
-  recurrence: string;
-}
+// Importăm FullCalendar doar pe client
+const FullCalendar = dynamic(() => import("@fullcalendar/react"), { ssr: false });
+import dayGridPlugin from "@fullcalendar/daygrid";     // Vizualizare lunară
+import timeGridPlugin from "@fullcalendar/timegrid";   // Vizualizare săptămânală/zi
+import listPlugin from "@fullcalendar/list";           // Vizualizare listă
+import interactionPlugin from "@fullcalendar/interaction"; // Interacțiuni
 
-interface UniversitySchedule {
-  id: number;
-  weekType: "Odd" | "Even";
-  courseName: string;
-}
+type TaskEvent = {
+  id: string;
+  title: string;
+  start: string;
+  end?: string;
+  extendedProps: {
+    category: string;
+  };
+};
 
 export default function SchedulePage() {
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [universitySchedules, setUniversitySchedules] = useState<UniversitySchedule[]>([]);
-  const [viewMode, setViewMode] = useState<"month" | "week">("month");
-  const [showTaskModal, setShowTaskModal] = useState(false);
-  const [showUniversityModal, setShowUniversityModal] = useState(false);
-  const [taskInput, setTaskInput] = useState({
-    text: "",
-    type: "",
-    priority: "Medium",
-    recurrence: "None",
-    id: null as number | null,
-  });
-  const [universityInput, setUniversityInput] = useState({
-    weekType: "Odd" as "Odd" | "Even",
-    courseName: "",
-  });
+  const calendarRef = useRef<any>(null);
+  const [events, setEvents] = useState<TaskEvent[]>([]);
+  const [quickText, setQuickText] = useState("");
 
-  const taskTypes = ["Work", "Sport", "Study", "Relax"];
-  const priorityOptions = ["Low", "Medium", "High"];
-  const recurrenceOptions = ["None", "Daily", "Weekly", "Monthly"];
-
+  // Încărcăm evenimentele din localStorage
   useEffect(() => {
-    const savedTasks = localStorage.getItem("scheduleTasks");
-    const savedSchedules = localStorage.getItem("universitySchedules");
-    if (savedTasks) setTasks(JSON.parse(savedTasks));
-    if (savedSchedules) setUniversitySchedules(JSON.parse(savedSchedules));
+    const storedEvents = localStorage.getItem("fcEvents");
+    if (storedEvents) setEvents(JSON.parse(storedEvents));
   }, []);
 
+  // Salvăm evenimentele în localStorage
   useEffect(() => {
-    localStorage.setItem("scheduleTasks", JSON.stringify(tasks));
-    localStorage.setItem("universitySchedules", JSON.stringify(universitySchedules));
-  }, [tasks, universitySchedules]);
+    localStorage.setItem("fcEvents", JSON.stringify(events));
+  }, [events]);
 
-  const handleAddTask = () => {
-    if (!selectedDate) return;
-    setTaskInput({ text: "", type: "", priority: "Medium", recurrence: "None", id: null });
-    setShowTaskModal(true);
+  // Adăugare rapidă de evenimente
+  const handleQuickAdd = () => {
+    if (!quickText.trim()) return;
+    const iso = dayjs().hour(12).minute(0).second(0).format();
+    setEvents((prev) => [
+      ...prev,
+      {
+        id: Date.now().toString(),
+        title: quickText,
+        start: iso,
+        extendedProps: { category: "Curs" },
+      },
+    ]);
+    setQuickText("");
   };
 
-  const handleSaveTask = () => {
-    if (!taskInput.text || !taskInput.type || !selectedDate) return;
-
-    const newTask = {
-      date: format(selectedDate, "yyyy-MM-dd"),
-      text: taskInput.text,
-      type: taskInput.type,
-      priority: taskInput.priority,
-      recurrence: taskInput.recurrence,
-      id: taskInput.id !== null ? taskInput.id : Date.now(),
-    };
-
-    if (taskInput.id !== null) {
-      setTasks(tasks.map((task) => (task.id === taskInput.id ? { ...task, ...newTask } : task)));
-    } else {
-      setTasks((prev) => [...prev, newTask]);
+  // Creare eveniment prin selectare
+  const handleDateSelect = (selectInfo: any) => {
+    const title = prompt("Numele activității:");
+    if (title) {
+      setEvents((prev) => [
+        ...prev,
+        {
+          id: Date.now().toString(),
+          title,
+          start: selectInfo.startStr,
+          end: selectInfo.endStr,
+          extendedProps: { category: "Curs" },
+        },
+      ]);
     }
-
-    setShowTaskModal(false);
+    selectInfo.view.calendar.unselect();
   };
 
-  const handleEditTask = (task: Task) => {
-    setTaskInput({
-      text: task.text,
-      type: task.type,
-      priority: task.priority,
-      recurrence: task.recurrence,
-      id: task.id,
-    });
-    setSelectedDate(new Date(task.date));
-    setShowTaskModal(true);
+  // Mutare eveniment prin drag-and-drop
+  const handleEventDrop = (dropInfo: any) => {
+    const { event } = dropInfo;
+    setEvents((prev) =>
+      prev.map((ev) =>
+        ev.id === event.id
+          ? { ...ev, start: event.startStr, end: event.endStr || undefined }
+          : ev
+      )
+    );
   };
-
-  const handleDeleteTask = (taskId: number) => {
-    setTasks(tasks.filter((task) => task.id !== taskId));
-  };
-
-  const handleAddUniversitySchedule = () => {
-    setUniversityInput({ weekType: "Odd", courseName: "" });
-    setShowUniversityModal(true);
-  };
-
-  const handleSaveUniversitySchedule = () => {
-    if (!universityInput.courseName) return;
-
-    const newSchedule = {
-      id: Date.now(),
-      weekType: universityInput.weekType,
-      courseName: universityInput.courseName,
-    };
-
-    setUniversitySchedules((prev) => [...prev, newSchedule]);
-    setShowUniversityModal(false);
-  };
-
-  const renderHeader = () => (
-    <div className="flex flex-col md:flex-row items-center justify-between mb-6 gap-4">
-      <div className="flex items-center gap-2">
-        <button
-          onClick={() =>
-            viewMode === "month" ? setCurrentDate(subMonths(currentDate, 1)) : setCurrentDate(subWeeks(currentDate, 1))
-          }
-          className="text-indigo-600 hover:text-indigo-800 font-semibold"
-        >
-          ← Previous
-        </button>
-        <button
-          onClick={() => setCurrentDate(new Date())}
-          className="text-gray-300 hover:text-gray-500 font-semibold"
-        >
-          Today
-        </button>
-        <button
-          onClick={() =>
-            viewMode === "month" ? setCurrentDate(addMonths(currentDate, 1)) : setCurrentDate(addWeeks(currentDate, 1))
-          }
-          className="text-indigo-600 hover:text-indigo-800 font-semibold"
-        >
-          Next →
-        </button>
-      </div>
-
-      <h2 className="text-2xl font-bold">{format(currentDate, "MMMM yyyy")}</h2>
-
-      <div className="flex gap-2">
-        <button
-          onClick={() => setViewMode("month")}
-          className={`px-4 py-2 rounded ${viewMode === "month" ? "bg-indigo-500 text-white" : "bg-gray-800"}`}
-        >
-          Month
-        </button>
-        <button
-          onClick={() => setViewMode("week")}
-          className={`px-4 py-2 rounded ${viewMode === "week" ? "bg-indigo-500 text-white" : "bg-gray-800"}`}
-        >
-          Week
-        </button>
-      </div>
-    </div>
-  );
-
-  const generateCalendarDays = () => {
-    const start = viewMode === "month" ? startOfWeek(startOfMonth(currentDate)) : startOfWeek(currentDate);
-    const end = viewMode === "month" ? endOfWeek(endOfMonth(currentDate)) : endOfWeek(currentDate);
-
-    const days: Date[] = [];
-    let day = start;
-    while (day <= end) {
-      days.push(day);
-      day = addDays(day, 1);
-    }
-    return days;
-  };
-
-  const days = generateCalendarDays();
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-gray-900 text-white min-h-screen pt-32 pb-8 px-4 relative z-10"
-    >
-      <div className="max-w-7xl mx-auto">
-        {renderHeader()}
+    <div className="min-h-screen bg-gray-900 text-white">
+      {/* Navbar */}
+      <nav className="bg-gray-800 p-4">
+        <h1 className="text-xl font-bold">Orar</h1>
+      </nav>
 
-        <div className="flex gap-4 mb-6">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-gray-800">
+        <div className="flex gap-2 w-full sm:w-auto">
+          <input
+            type="text"
+            placeholder="Adaugă rapid o activitate..."
+            value={quickText}
+            onChange={(e) => setQuickText(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && handleQuickAdd()}
+            className="flex-grow px-3 py-2 rounded bg-gray-700 text-white"
+          />
           <button
-            onClick={handleAddUniversitySchedule}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+            onClick={handleQuickAdd}
+            className="px-4 py-2 bg-indigo-600 text-white rounded"
           >
-            Add University Schedule
+            Adaugă
           </button>
-          <button
-            onClick={handleAddTask}
-            className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-          >
-            Add Activity
-          </button>
-        </div>
-
-        <div className="grid grid-cols-7 gap-4 mt-2">
-          {days.map((day) => {
-            const dateKey = format(day, "yyyy-MM-dd");
-            const dayTasks = tasks.filter((task) => task.date === dateKey);
-            const isToday = isSameDay(day, new Date());
-
-            return (
-              <motion.div
-                whileHover={{ scale: 1.02 }}
-                key={dateKey}
-                onClick={() => setSelectedDate(day)}
-                className={`rounded-lg p-4 min-h-[120px] cursor-pointer transition-all
-                  ${!isSameMonth(day, currentDate) ? "bg-gray-700 text-gray-500" : "bg-gray-800 text-white"}
-                  ${isToday ? "ring-2 ring-indigo-400" : ""}
-                `}
-              >
-                <div className="text-sm font-bold">{format(day, "d")}</div>
-                <div className="mt-2 space-y-1">
-                  {dayTasks.map((task) => (
-                    <div
-                      key={task.id}
-                      className={`bg-${task.priority === "High" ? "red" : task.priority === "Medium" ? "yellow" : "green"}-500 text-indigo-100 text-xs rounded px-2 py-1 truncate`}
-                    >
-                      <span className="font-semibold">{task.text}</span>
-                      <div className="text-xs">{task.type}</div>
-                      <div className="flex gap-2 mt-1 text-xs">
-                        <button
-                          onClick={() => handleEditTask(task)}
-                          className="text-yellow-400 hover:text-yellow-500"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDeleteTask(task.id)}
-                          className="text-red-400 hover:text-red-500"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            );
-          })}
         </div>
       </div>
 
-      {/* Task Modal */}
-      {showTaskModal && (
-        <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex justify-center items-center">
-          <div className="bg-gray-900 p-6 rounded-lg w-96">
-            <h3 className="text-2xl font-semibold mb-6">{taskInput.id ? "Edit Task" : "Add Task"}</h3>
-            <input
-              type="text"
-              placeholder="Task Name"
-              value={taskInput.text}
-              onChange={(e) => setTaskInput({ ...taskInput, text: e.target.value })}
-              className="w-full p-3 mb-4 bg-gray-800 text-white rounded"
-            />
-            <select
-              value={taskInput.type}
-              onChange={(e) => setTaskInput({ ...taskInput, type: e.target.value })}
-              className="w-full p-3 mb-4 bg-gray-800 text-white rounded"
-            >
-              <option value="">Select Activity Type</option>
-              {taskTypes.map((type, idx) => (
-                <option key={idx} value={type}>
-                  {type}
-                </option>
-              ))}
-            </select>
-            <select
-              value={taskInput.priority}
-              onChange={(e) => setTaskInput({ ...taskInput, priority: e.target.value })}
-              className="w-full p-3 mb-4 bg-gray-800 text-white rounded"
-            >
-              <option value="">Select Priority</option>
-              {priorityOptions.map((priority, idx) => (
-                <option key={idx} value={priority}>
-                  {priority}
-                </option>
-              ))}
-            </select>
-            <div className="flex justify-end gap-4">
-              <button
-                onClick={() => setShowTaskModal(false)}
-                className="px-4 py-2 bg-gray-600 text-white rounded"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveTask}
-                className="px-4 py-2 bg-indigo-600 text-white rounded"
-              >
-                Save
-              </button>
-            </div>
+      {/* Legendă categorii */}
+      <div className="flex gap-4 p-4 text-sm">
+        {[
+          ["Curs", "bg-green-500"],
+          ["Seminar", "bg-blue-500"],
+          ["Laborator", "bg-purple-500"],
+        ].map(([label, color]) => (
+          <div key={label} className="flex items-center gap-1">
+            <span className={`${color} w-3 h-3 rounded-full`}></span>
+            {label}
           </div>
-        </div>
-      )}
+        ))}
+      </div>
 
-      {/* University Schedule Modal */}
-      {showUniversityModal && (
-        <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex justify-center items-center">
-          <div className="bg-gray-900 p-6 rounded-lg w-96">
-            <h3 className="text-2xl font-semibold mb-6">Add University Schedule</h3>
-            <select
-              value={universityInput.weekType}
-              onChange={(e) => setUniversityInput({ ...universityInput, weekType: e.target.value as "Odd" | "Even" })}
-              className="w-full p-3 mb-4 bg-gray-800 text-white rounded"
-            >
-              <option value="Odd">Odd Week</option>
-              <option value="Even">Even Week</option>
-            </select>
-            <input
-              type="text"
-              placeholder="Course Name"
-              value={universityInput.courseName}
-              onChange={(e) => setUniversityInput({ ...universityInput, courseName: e.target.value })}
-              className="w-full p-3 mb-4 bg-gray-800 text-white rounded"
-            />
-            <div className="flex justify-end gap-4">
-              <button
-                onClick={() => setShowUniversityModal(false)}
-                className="px-4 py-2 bg-gray-600 text-white rounded"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleSaveUniversitySchedule}
-                className="px-4 py-2 bg-indigo-600 text-white rounded"
-              >
-                Save
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </motion.div>
+      {/* Calendar */}
+      <div className="p-4">
+        <FullCalendar
+          plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
+          initialView="dayGridMonth"
+          headerToolbar={{
+            left: "prev,next today",
+            center: "title",
+            right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek",
+          }}
+          selectable={true}
+          editable={true}
+          selectMirror={true}
+          select={handleDateSelect}
+          eventDrop={handleEventDrop}
+          events={events as any}
+          eventContent={(eventInfo) => {
+            const cat = eventInfo.event.extendedProps.category;
+            const cls =
+              cat === "Curs"
+                ? "bg-green-600"
+                : cat === "Seminar"
+                ? "bg-blue-600"
+                : "bg-purple-600";
+            return (
+              <div className={`${cls} text-white text-xs px-1 rounded`}>
+                {eventInfo.event.title}
+              </div>
+            );
+          }}
+          dayMaxEvents={3}
+          themeSystem="standard"
+          height="auto"
+        />
+      </div>
+    </div>
   );
 }

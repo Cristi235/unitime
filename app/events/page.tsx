@@ -1,5 +1,4 @@
 "use client";
-
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 
@@ -14,9 +13,9 @@ const isValidUrl = (url: string): boolean => {
 
 const EventsPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState("events"); // "events" or "jobs"
+  const [activeTab, setActiveTab] = useState<"events" | "jobs">("events");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 4; // Display 4 items per page
+  const itemsPerPage = 4;
 
   const sections = {
     events: [
@@ -100,139 +99,125 @@ const EventsPage = () => {
     ],
   };
 
-  const filteredEvents = (sections.events || []).filter((event) =>
-    event.title.toLowerCase().includes(searchQuery.toLowerCase())
-  );
-  const filteredJobs = (sections.jobs || []).filter((job) =>
-    job.title.toLowerCase().includes(searchQuery.toLowerCase())
+  // Filtrare titluri după query
+  const filtered = (activeTab === "events"
+    ? sections.events
+    : sections.jobs
+  ).filter((item) =>
+    item.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const paginatedItems: {
-    title: string;
-    description: string;
-    date: string;
-    company?: string;
-    link: string;
-  }[] =
-    activeTab === "events"
-      ? filteredEvents.slice(
-          (currentPage - 1) * itemsPerPage,
-          currentPage * itemsPerPage
-        )
-      : filteredJobs.slice(
-          (currentPage - 1) * itemsPerPage,
-          currentPage * itemsPerPage
-        );
-
-  const totalPages =
-    activeTab === "events"
-      ? Math.ceil(filteredEvents.length / itemsPerPage)
-      : Math.ceil(filteredJobs.length / itemsPerPage);
+  // Paginate
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginatedItems = filtered.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  );
 
   return (
-    <main className="min-h-screen bg-gray-900 flex flex-col items-center pt-32 px-6 pb-24">
+    <main className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex flex-col items-center pt-32 px-6 pb-12">
       <motion.div
-        className="bg-gray-800 p-8 rounded-2xl shadow-2xl w-full max-w-6xl mb-16"
+        className="bg-gray-800 bg-opacity-50 p-8 rounded-2xl shadow-2xl w-full max-w-6xl mb-12"
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        transition={{ duration: 0.4 }}
       >
-        <h1 className="text-3xl font-bold text-white mb-8 text-center">
+        <h1 className="text-3xl font-bold text-white mb-6 text-center">
           Evenimente și Oportunități
         </h1>
 
         {/* Tabs */}
-        <div className="flex justify-center mb-8">
-          <button
-            onClick={() => setActiveTab("events")}
-            className={`px-6 py-2 rounded-l-lg ${
-              activeTab === "events"
-                ? "bg-purple-500 text-white"
-                : "bg-gray-700 text-gray-300"
-            }`}
-          >
-            Evenimente
-          </button>
-          <button
-            onClick={() => setActiveTab("jobs")}
-            className={`px-6 py-2 rounded-r-lg ${
-              activeTab === "jobs"
-                ? "bg-purple-500 text-white"
-                : "bg-gray-700 text-gray-300"
-            }`}
-          >
-            Locuri de muncă
-          </button>
+        <div className="flex justify-center mb-6">
+          {["events", "jobs"].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => {
+                setActiveTab(tab as any);
+                setCurrentPage(1);
+              }}
+              className={`px-6 py-2 first:rounded-l-lg last:rounded-r-lg transition ${
+                activeTab === tab
+                  ? "bg-purple-500 text-white"
+                  : "bg-gray-700 text-gray-300 hover:bg-gray-600"
+              }`}
+            >
+              {tab === "events" ? "Evenimente" : "Locuri de muncă"}
+            </button>
+          ))}
         </div>
 
-        {/* Search Bar */}
+        {/* Search */}
         <div className="mb-8">
           <input
             type="text"
-            placeholder="Caută evenimente sau locuri de muncă..."
+            placeholder={`Caută ${
+              activeTab === "events" ? "evenimente" : "locuri de muncă"
+            }...`}
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full p-4 rounded-lg border border-gray-600 bg-gray-700 text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500"
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="w-full p-4 rounded-lg bg-gray-700 border border-gray-600 text-gray-200 focus:outline-none focus:ring-2 focus:ring-purple-500 transition"
           />
         </div>
 
         {/* Items */}
-        <div className="grid grid-cols-1 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
           {paginatedItems.length > 0 ? (
-            paginatedItems.map((item, index) => (
-              <motion.div
-                key={index}
-                className="p-4 bg-gray-700 rounded-xl shadow-sm"
-                whileHover={{ scale: 1.03 }}
-                transition={{ type: "spring", stiffness: 300 }}
+            paginatedItems.map((item, idx) => (
+              <div
+                key={idx}
+                className="p-6 bg-gray-700 bg-opacity-60 rounded-2xl shadow-md transform transition-transform duration-150 ease-out hover:scale-105"
               >
                 <h3 className="text-xl font-semibold text-white mb-2">
                   {item.title}
                 </h3>
-                <p className="text-sm text-gray-300 mb-4">
+                <p className="text-gray-300 mb-4 text-sm">
                   {item.description}
                 </p>
-                <span className="text-xs text-gray-400 block mb-2">
-                  <strong>Date: </strong>
-                  {item.date}
-                </span>
-                {item.company && (
-                  <span className="text-xs text-gray-400">
-                    <strong>Companie: </strong>
-                    {item.company}
-                  </span>
-                )}
-                {isValidUrl(item.link) && (
-                  <div className="flex justify-end mt-4">
-                    <a
-                      href={item.link}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600"
-                    >
-                      More Details
-                    </a>
+                <div className="text-gray-400 text-xs mb-4 space-y-1">
+                  <div>
+                    <strong>Date:</strong> {item.date}
                   </div>
+                  {activeTab === "jobs" && "company" in item && (
+                    <div>
+                      <div>
+                        <strong>Companie:</strong> {String(item.company)}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {isValidUrl(item.link) && (
+                  <a
+                    href={item.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block px-4 py-2 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-lg hover:opacity-90 transition"
+                  >
+                    Detalii
+                  </a>
                 )}
-              </motion.div>
+              </div>
             ))
           ) : (
-            <p className="text-gray-400 text-center">No items found.</p>
+            <p className="text-gray-400 text-center col-span-full">
+              Nu s-au găsit rezultate.
+            </p>
           )}
         </div>
 
         {/* Pagination */}
-        <div className="flex justify-center mt-8">
+        <div className="flex justify-center mt-10">
           {Array.from({ length: totalPages }, (_, i) => (
             <button
               key={i}
               onClick={() => setCurrentPage(i + 1)}
-              className={`px-4 py-2 mx-1 rounded-lg ${
+              className={`mx-1 px-4 py-2 rounded-lg transition ${
                 currentPage === i + 1
                   ? "bg-purple-500 text-white"
-                  : "bg-gray-700 text-gray-300"
+                  : "bg-gray-700 text-gray-300 hover:bg-gray-600"
               }`}
-              aria-label={`Go to page ${i + 1}`}
             >
               {i + 1}
             </button>

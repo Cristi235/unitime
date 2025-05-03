@@ -4,7 +4,8 @@ import { motion } from "framer-motion";
 import { HiAcademicCap, HiBars3BottomRight } from "react-icons/hi2";
 import { navLinks } from "@/constant/constant";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import Image from "next/image";
 
 type Props = {
   openNav: () => void;
@@ -12,10 +13,13 @@ type Props = {
 
 const Navbar = ({ openNav }: Props) => {
   const [isScrolled, setIsScrolled] = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false); // State for dropdown visibility
-  const dropdownRef = useRef<HTMLDivElement>(null); // Ref for dropdown
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const notificationsRef = useRef<HTMLDivElement>(null);
 
   const pathname = usePathname();
+  const router = useRouter();
 
   const containerVariants = {
     hidden: { opacity: 0, y: -20 },
@@ -39,16 +43,21 @@ const Navbar = ({ openNav }: Props) => {
 
   useEffect(() => {
     const handleScroll = () => {
-      if (window.scrollY >= 50) {
-        setIsScrolled(true);
-      } else {
-        setIsScrolled(false);
-      }
+      setIsScrolled(window.scrollY >= 50);
     };
 
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setDropdownOpen(false); // Close dropdown if clicked outside
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setDropdownOpen(false);
+      }
+      if (
+        notificationsRef.current &&
+        !notificationsRef.current.contains(event.target as Node)
+      ) {
+        setNotificationsOpen(false);
       }
     };
 
@@ -60,6 +69,11 @@ const Navbar = ({ openNav }: Props) => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  const handleLogout = () => {
+    // Aici poți adăuga logica de ștergere a sesiunii sau token-ului, dacă este cazul
+    router.push("/");
+  };
 
   return (
     <motion.div
@@ -105,11 +119,17 @@ const Navbar = ({ openNav }: Props) => {
           ))}
         </motion.div>
 
-        {/* Button + Menu */}
-        <motion.div variants={itemVariants} className="flex items-center space-x-4">
-          {/* Notifications Bell */}
-          <div className="relative">
-            <button className="relative hover:scale-110 transition-transform duration-200">
+        {/* Buttons */}
+        <motion.div
+          variants={itemVariants}
+          className="flex items-center space-x-4"
+        >
+          {/* Notifications */}
+          <div className="relative" ref={notificationsRef}>
+            <button
+              onClick={() => setNotificationsOpen((prev) => !prev)}
+              className="relative hover:scale-110 transition-transform duration-200"
+            >
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 fill="none"
@@ -124,47 +144,56 @@ const Navbar = ({ openNav }: Props) => {
                   d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V4a2 2 0 10-4 0v1.341C8.67 7.165 8 8.97 8 11v3.159c0 .538-.214 1.055-.595 1.436L6 17h5m4 0a3 3 0 11-6 0m6 0H9"
                 />
               </svg>
-              {/* Notification Badge */}
               <span className="absolute top-0 right-0 inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white bg-red-500 rounded-full">
                 3
               </span>
             </button>
+            {notificationsOpen && (
+              <div className="absolute right-0 mt-2 w-64 bg-white rounded-md shadow-lg p-4">
+                <p className="text-gray-700 font-semibold mb-2">Notificări</p>
+                <ul className="space-y-2">
+                  <li className="text-sm text-gray-600">Notificare 1</li>
+                  <li className="text-sm text-gray-600">Notificare 2</li>
+                  <li className="text-sm text-gray-600">Notificare 3</li>
+                </ul>
+              </div>
+            )}
           </div>
 
-          {/* Profile Section */}
+          {/* Profile */}
           <div className="relative" ref={dropdownRef}>
-            {/* User Avatar */}
-            <img
-              src="/path-to-avatar.jpg" // Replace with the actual avatar URL
+            <Image
+              src="/default-avatar.jpg"
               alt="User Avatar"
-              className="w-8 h-8 rounded-full cursor-pointer hover:scale-110 transition-transform duration-200"
-              onClick={() => setDropdownOpen((prev) => !prev)} // Toggle dropdown visibility
+              width={32}
+              height={32}
+              className="rounded-full cursor-pointer hover:scale-110 transition-transform duration-200"
+              onClick={() => setDropdownOpen((prev) => !prev)}
             />
-            {/* Dropdown Menu */}
             {dropdownOpen && (
               <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg">
                 <Link href="/profile" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">
-                  Profile
+                  Profil
                 </Link>
                 <Link href="/settings" className="block px-4 py-2 text-gray-700 hover:bg-gray-100">
-                  Settings
+                  Setări
                 </Link>
                 <button
-                  onClick={() => console.log("Logout clicked")} // Replace with your logout logic
+                  onClick={handleLogout}
                   className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-gray-100"
                 >
-                  Logout
+                  Deconectare
                 </button>
               </div>
             )}
           </div>
-        </motion.div>
 
-        {/* Mobile Menu Icon */}
-        <HiBars3BottomRight
-          onClick={openNav}
-          className="w-8 h-8 cursor-pointer text-white lg:hidden"
-        />
+          {/* Mobile Menu Icon */}
+          <HiBars3BottomRight
+            onClick={openNav}
+            className="w-8 h-8 cursor-pointer text-white lg:hidden"
+          />
+        </motion.div>
       </div>
     </motion.div>
   );

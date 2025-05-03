@@ -49,7 +49,7 @@ function TaskCard({ task, deleteTask, updateTask}: Props) {
       <div
         ref={setNodeRef}
         style={style}
-        className="bg-gray-700 p-4 rounded-lg shadow-md transition"
+        className="bg-gray-700 p-4 rounded-lg shadow-md transition text-white"
       >
         <textarea
           className="w-full h-full bg-gray-600 text-gray-300 rounded p-2 focus:outline-none focus:ring-2 focus:ring-purple-500"
@@ -74,7 +74,7 @@ function TaskCard({ task, deleteTask, updateTask}: Props) {
   {...listeners}
   onClick={toggleEditMode}
    className="bg-mainBackgroundColor p-2.5 h-[100px]
-  min-h-[100px] items-center flex text-left rounded-xl
+  min-h-[100px] items-center flex text-left  text-white rounded-xl
   hover:ring-2 hover:ring-inset hover:ring-purple-500
   cursor-grab relative .task"
 
