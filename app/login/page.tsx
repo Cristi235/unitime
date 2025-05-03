@@ -2,14 +2,14 @@
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
-import Link from "next/link"; // Importă Link din next/link pentru navigare
+import Link from "next/link";
 
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [rememberMe, setRememberMe] = useState(false); // State pentru Remember Me
+  const [rememberMe, setRememberMe] = useState(false);
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,7 +23,6 @@ export default function LoginPage() {
 
     // Dacă Remember Me este selectat, poți salva un cookie sau un token
     if (rememberMe) {
-      // Poți folosi cookie sau alte metode pentru a păstra utilizatorul conectat
       console.log("Remember me is enabled");
     }
 
@@ -31,106 +30,108 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-indigo-100 to-purple-200 dark:from-gray-900 dark:to-gray-800 flex flex-col items-center justify-center px-6 py-12">
+    <main className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 flex flex-col items-center justify-center px-6 py-12">
       <motion.div
         className="text-center max-w-lg"
         initial={{ opacity: 0, y: 40 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
       >
-        <h1 className="text-4xl md:text-5xl font-extrabold text-gray-800 dark:text-white mb-4">
+        <h1 className="text-5xl md:text-6xl font-extrabold text-white mb-4">
           Conectează-te la{" "}
-          <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-blue-600">
+          <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-400 to-blue-500">
             UniTime
           </span>
         </h1>
-        <p className="text-lg text-gray-700 dark:text-gray-300 mb-8">
-          Introduceti detaliile pentru a accesa contul vostru.
+        <p className="text-lg text-gray-300 mb-8">
+          Introdu detaliile pentru a accesa contul tău.
         </p>
       </motion.div>
 
       <motion.div
-        className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg w-full max-w-md"
+        className="bg-gray-800 bg-opacity-50 backdrop-blur-md p-8 rounded-2xl shadow-xl w-full max-w-md"
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.4, duration: 0.5 }}
       >
-        <form onSubmit={handleLogin}>
-          <div className="mb-4">
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+        <form onSubmit={handleLogin} className="space-y-6">
+          <div>
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-gray-200"
+            >
               Email
             </label>
             <input
               type="email"
               id="email"
-              className="mt-2 p-3 w-full rounded-lg border border-gray-300 dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-600"
+              className="mt-2 p-3 w-full rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
             />
           </div>
 
-          <div className="mb-6">
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+          <div>
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-gray-200"
+            >
               Parolă
             </label>
             <input
               type="password"
               id="password"
-              className="mt-2 p-3 w-full rounded-lg border border-gray-300 dark:bg-gray-700 dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-600"
+              className="mt-2 p-3 w-full rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
             />
           </div>
 
-          {/* Câmpul Remember Me */}
-          <div className="mb-4 flex items-center">
+          <div className="flex items-center">
             <input
               type="checkbox"
               id="rememberMe"
-              className="mr-2"
+              className="h-4 w-4 text-indigo-500 bg-gray-600 border-gray-500 rounded"
               checked={rememberMe}
               onChange={() => setRememberMe(!rememberMe)}
             />
-            <label htmlFor="rememberMe" className="text-sm text-gray-700 dark:text-gray-300">
-              Ține-mă minte
+            <label
+              htmlFor="rememberMe"
+              className="ml-2 text-sm text-gray-300"
+            >
+              Ține‑mă minte
             </label>
           </div>
 
-          {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
+          {error && (
+            <p className="text-red-500 text-sm">{error}</p>
+          )}
 
           <motion.button
             type="submit"
-            className="w-full py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-            whileHover={{ scale: 1.05 }}
+            className="w-full py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-xl font-medium shadow-lg hover:opacity-90 transition"
+            whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
-            Conectează-te
+            Conectează‑te
           </motion.button>
         </form>
 
-        {/* Link pentru a accesa Forgot Password */}
-        <div className="mt-4 text-center">
+        <div className="mt-6 flex justify-between text-sm text-gray-400">
           <Link
             href="/forgot-password"
-            className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
+            className="hover:text-white transition"
           >
             Ai uitat parola?
           </Link>
-        </div>
-
-        {/* Link pentru a naviga către pagina de înregistrare */}
-        <div className="mt-4 text-center">
-          <p className="text-sm text-gray-600 dark:text-gray-300">
-            Nu ai cont?{" "}
-            <Link
-              href="/signup"
-              className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300"
-            >
-              Înregistrează-te
-            </Link>
-          </p>
+          <Link
+            href="/signup"
+            className="hover:text-white transition"
+          >
+            Creează cont
+          </Link>
         </div>
       </motion.div>
     </main>
