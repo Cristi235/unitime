@@ -1,164 +1,355 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import dynamic from "next/dynamic";
-import dayjs from "dayjs";
+import { v4 as uuidv4 } from "uuid";
+import { FaPlus } from "react-icons/fa";
 
-// Importăm FullCalendar doar pe client
+// Import FullCalendar dynamically
 const FullCalendar = dynamic(() => import("@fullcalendar/react"), { ssr: false });
-import dayGridPlugin from "@fullcalendar/daygrid";     // Vizualizare lunară
-import timeGridPlugin from "@fullcalendar/timegrid";   // Vizualizare săptămânală/zi
-import listPlugin from "@fullcalendar/list";           // Vizualizare listă
-import interactionPlugin from "@fullcalendar/interaction"; // Interacțiuni
+import dayGridPlugin from "@fullcalendar/daygrid";
+import timeGridPlugin from "@fullcalendar/timegrid";
+import listPlugin from "@fullcalendar/list";
+import interactionPlugin from "@fullcalendar/interaction";
 
 type TaskEvent = {
   id: string;
   title: string;
+  location?: string;
   start: string;
   end?: string;
   extendedProps: {
     category: string;
+    weekMode?: "Odd" | "Even" | "Both";
   };
 };
 
-export default function SchedulePage() {
-  const calendarRef = useRef<any>(null);
-  const [events, setEvents] = useState<TaskEvent[]>([]);
-  const [quickText, setQuickText] = useState("");
+const defaultCategories = [
+  { label: "Activity", color: "bg-blue-500" },
+  { label: "University Subject", color: "bg-green-500" },
+];
 
-  // Încărcăm evenimentele din localStorage
+export default function SchedulePage() {
+  const [events, setEvents] = useState<TaskEvent[]>([]);
+  const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
+  const [isSubjectModalOpen, setIsSubjectModalOpen] = useState(false);
+  const [modalData, setModalData] = useState<Partial<TaskEvent>>({});
+  const [categories] = useState(defaultCategories);
+
+  // Load events from localStorage
   useEffect(() => {
     const storedEvents = localStorage.getItem("fcEvents");
     if (storedEvents) setEvents(JSON.parse(storedEvents));
   }, []);
 
-  // Salvăm evenimentele în localStorage
+  // Save events to localStorage (debounced)
   useEffect(() => {
-    localStorage.setItem("fcEvents", JSON.stringify(events));
+    const timeout = setTimeout(() => {
+      localStorage.setItem("fcEvents", JSON.stringify(events));
+    }, 300);
+    return () => clearTimeout(timeout);
   }, [events]);
 
-  // Adăugare rapidă de evenimente
-  const handleQuickAdd = () => {
-    if (!quickText.trim()) return;
-    const iso = dayjs().hour(12).minute(0).second(0).format();
-    setEvents((prev) => [
-      ...prev,
-      {
-        id: Date.now().toString(),
-        title: quickText,
-        start: iso,
-        extendedProps: { category: "Curs" },
-      },
-    ]);
-    setQuickText("");
+  // Open activity modal
+  const openActivityModal = (eventData: Partial<TaskEvent> = {}) => {
+    setModalData(eventData);
+    setIsActivityModalOpen(true);
   };
 
-  // Creare eveniment prin selectare
-  const handleDateSelect = (selectInfo: any) => {
-    const title = prompt("Numele activității:");
-    if (title) {
+  // Open subject modal
+  const openSubjectModal = () => {
+    setModalData({});
+    setIsSubjectModalOpen(true);
+  };
+
+  // Close modals
+  const closeModals = () => {
+    setModalData({});
+    setIsActivityModalOpen(false);
+    setIsSubjectModalOpen(false);
+  };
+
+  // Save activity or subject
+  const saveEvent = () => {
+    if (!modalData.title || !modalData.start) {
+      alert("Title and start date are required!");
+      return;
+    }
+
+    if (modalData.end && modalData.start > modalData.end) {
+      alert("Start date must be before the end date!");
+      return;
+    }
+
+    if (modalData.id) {
+      // Edit existing event
+      setEvents((prev) =>
+        prev.map((ev) => (ev.id === modalData.id ? { ...ev, ...modalData } : ev))
+      );
+    } else {
+      // Add new event
       setEvents((prev) => [
         ...prev,
         {
-          id: Date.now().toString(),
-          title,
-          start: selectInfo.startStr,
-          end: selectInfo.endStr,
-          extendedProps: { category: "Curs" },
-        },
+          id: uuidv4(),
+          title: modalData.title,
+          location: modalData.location,
+          start: modalData.start,
+          end: modalData.end,
+          extendedProps: {
+            category: modalData.extendedProps?.category || "Activity",
+            weekMode: modalData.extendedProps?.weekMode || "Both",
+          },
+        } as TaskEvent,
       ]);
     }
-    selectInfo.view.calendar.unselect();
+
+    closeModals();
   };
 
-  // Mutare eveniment prin drag-and-drop
-  const handleEventDrop = (dropInfo: any) => {
-    const { event } = dropInfo;
-    setEvents((prev) =>
-      prev.map((ev) =>
-        ev.id === event.id
-          ? { ...ev, start: event.startStr, end: event.endStr || undefined }
-          : ev
-      )
-    );
+  // Delete event
+  const deleteEvent = (eventId: string) => {
+    if (confirm("Are you sure you want to delete this event?")) {
+      setEvents((prev) => prev.filter((ev) => ev.id !== eventId));
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
-      {/* Navbar */}
-      <nav className="bg-gray-800 p-4">
-        <h1 className="text-xl font-bold">Orar</h1>
-      </nav>
-
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-gray-800">
-        <div className="flex gap-2 w-full sm:w-auto">
-          <input
-            type="text"
-            placeholder="Adaugă rapid o activitate..."
-            value={quickText}
-            onChange={(e) => setQuickText(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleQuickAdd()}
-            className="flex-grow px-3 py-2 rounded bg-gray-700 text-white"
-          />
-          <button
-            onClick={handleQuickAdd}
-            className="px-4 py-2 bg-indigo-600 text-white rounded"
-          >
-            Adaugă
-          </button>
-        </div>
-      </div>
-
-      {/* Legendă categorii */}
-      <div className="flex gap-4 p-4 text-sm">
-        {[
-          ["Curs", "bg-green-500"],
-          ["Seminar", "bg-blue-500"],
-          ["Laborator", "bg-purple-500"],
-        ].map(([label, color]) => (
-          <div key={label} className="flex items-center gap-1">
-            <span className={`${color} w-3 h-3 rounded-full`}></span>
-            {label}
-          </div>
-        ))}
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white pt-24">
+      {/* Buttons */}
+      <div className="flex justify-center gap-4 items-center p-4">
+        <button
+          onClick={() => openActivityModal()}
+          className="px-6 py-3 bg-gradient-to-r from-purple-400 to-blue-500 text-white rounded-lg shadow-md hover:opacity-90 transition flex items-center gap-2"
+        >
+          <FaPlus /> Add Activity
+        </button>
+        <button
+          onClick={openSubjectModal}
+          className="px-6 py-3 bg-gradient-to-r from-green-400 to-teal-500 text-white rounded-lg shadow-md hover:opacity-90 transition flex items-center gap-2"
+        >
+          <FaPlus /> Add Subject
+        </button>
       </div>
 
       {/* Calendar */}
       <div className="p-4">
-        <FullCalendar
-          plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
-          initialView="dayGridMonth"
-          headerToolbar={{
-            left: "prev,next today",
-            center: "title",
-            right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek",
-          }}
-          selectable={true}
-          editable={true}
-          selectMirror={true}
-          select={handleDateSelect}
-          eventDrop={handleEventDrop}
-          events={events as any}
-          eventContent={(eventInfo) => {
-            const cat = eventInfo.event.extendedProps.category;
-            const cls =
-              cat === "Curs"
-                ? "bg-green-600"
-                : cat === "Seminar"
-                ? "bg-blue-600"
-                : "bg-purple-600";
-            return (
-              <div className={`${cls} text-white text-xs px-1 rounded`}>
-                {eventInfo.event.title}
-              </div>
-            );
-          }}
-          dayMaxEvents={3}
-          themeSystem="standard"
-          height="auto"
-        />
+        <div className="bg-gray-800 rounded-lg shadow-lg p-6 border border-gray-700">
+          <FullCalendar
+            plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
+            initialView="dayGridMonth"
+            headerToolbar={{
+              left: "prev,next today",
+              center: "title",
+              right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek",
+            }}
+            firstDay={1} // Set Monday as the first day of the week
+            dayHeaderClassNames="bg-gray-700 text-gray-200" // Change header background and text color
+            selectable={true}
+            editable={true}
+            selectMirror={true}
+            select={(info) =>
+              openActivityModal({ start: info.startStr, end: info.endStr })
+            }
+            eventClick={(info) =>
+              openActivityModal({
+                id: info.event.id,
+                title: info.event.title,
+                location: info.event.extendedProps.location,
+                start: info.event.startStr,
+                end: info.event.endStr,
+                extendedProps: {
+                  category: info.event.extendedProps?.category || "Activity",
+                  weekMode: info.event.extendedProps?.weekMode || "Both",
+                },
+              })
+            }
+            events={events as any}
+            eventContent={(eventInfo) => {
+              const cat = eventInfo.event.extendedProps.category;
+              const cls =
+                cat === "Activity"
+                  ? "bg-blue-600"
+                  : cat === "University Subject"
+                  ? "bg-green-600"
+                  : "bg-gray-600";
+              return (
+                <div
+                  className={`${cls} text-white text-xs px-1 rounded flex justify-between items-center`}
+                >
+                  <span>{eventInfo.event.title}</span>
+                  <button
+                    onClick={() => deleteEvent(eventInfo.event.id)}
+                    className="text-red-500 hover:text-red-700 ml-2"
+                  >
+                    ✕
+                  </button>
+                </div>
+              );
+            }}
+            dayMaxEvents={3}
+            themeSystem="standard"
+            height="auto"
+          />
+        </div>
       </div>
+
+      {/* Activity Modal */}
+      {isActivityModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">
+              {modalData.id ? "Edit Activity" : "Add Activity"}
+            </h2>
+            <div className="mb-4">
+              <label className="block text-sm mb-1">Title</label>
+              <input
+                type="text"
+                value={modalData.title || ""}
+                onChange={(e) =>
+                  setModalData((prev) => ({ ...prev, title: e.target.value }))
+                }
+                className="w-full px-3 py-2 rounded bg-gray-700 text-white border border-gray-600"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm mb-1">Location</label>
+              <input
+                type="text"
+                value={modalData.location || ""}
+                onChange={(e) =>
+                  setModalData((prev) => ({ ...prev, location: e.target.value }))
+                }
+                className="w-full px-3 py-2 rounded bg-gray-700 text-white border border-gray-600"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm mb-1">Start Date</label>
+              <input
+                type="datetime-local"
+                value={modalData.start || ""}
+                onChange={(e) =>
+                  setModalData((prev) => ({ ...prev, start: e.target.value }))
+                }
+                className="w-full px-3 py-2 rounded bg-gray-700 text-white border border-gray-600"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm mb-1">End Date</label>
+              <input
+                type="datetime-local"
+                value={modalData.end || ""}
+                onChange={(e) =>
+                  setModalData((prev) => ({ ...prev, end: e.target.value }))
+                }
+                className="w-full px-3 py-2 rounded bg-gray-700 text-white border border-gray-600"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={closeModals}
+                className="px-4 py-2 bg-gray-600 text-white rounded shadow-md hover:bg-gray-700 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveEvent}
+                className="px-4 py-2 bg-gradient-to-r from-purple-400 to-blue-500 text-white rounded shadow-md hover:opacity-90 transition"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Subject Modal */}
+      {isSubjectModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-md">
+            <h2 className="text-xl font-bold mb-4">Add University Subject</h2>
+            <div className="mb-4">
+              <label className="block text-sm mb-1">Subject Name</label>
+              <input
+                type="text"
+                value={modalData.title || ""}
+                onChange={(e) =>
+                  setModalData((prev) => ({ ...prev, title: e.target.value }))
+                }
+                className="w-full px-3 py-2 rounded bg-gray-700 text-white border border-gray-600"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm mb-1">Location</label>
+              <input
+                type="text"
+                value={modalData.location || ""}
+                onChange={(e) =>
+                  setModalData((prev) => ({ ...prev, location: e.target.value }))
+                }
+                className="w-full px-3 py-2 rounded bg-gray-700 text-white border border-gray-600"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm mb-1">Week Mode</label>
+              <select
+                value={modalData.extendedProps?.weekMode || "Both"}
+                onChange={(e) =>
+                  setModalData((prev) => ({
+                                      ...prev,
+                                      extendedProps: {
+                                        ...prev.extendedProps,
+                                        category: prev.extendedProps?.category || "Activity",
+                                        weekMode: e.target.value as "Odd" | "Even" | "Both",
+                                      },
+                                    }))
+                }
+                className="w-full px-3 py-2 rounded bg-gray-700 text-white border border-gray-600"
+              >
+                <option value="Both">Both Weeks</option>
+                <option value="Odd">Odd Weeks</option>
+                <option value="Even">Even Weeks</option>
+              </select>
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm mb-1">Start Date</label>
+              <input
+                type="datetime-local"
+                value={modalData.start || ""}
+                onChange={(e) =>
+                  setModalData((prev) => ({ ...prev, start: e.target.value }))
+                }
+                className="w-full px-3 py-2 rounded bg-gray-700 text-white border border-gray-600"
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm mb-1">End Date</label>
+              <input
+                type="datetime-local"
+                value={modalData.end || ""}
+                onChange={(e) =>
+                  setModalData((prev) => ({ ...prev, end: e.target.value }))
+                }
+                className="w-full px-3 py-2 rounded bg-gray-700 text-white border border-gray-600"
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={closeModals}
+                className="px-4 py-2 bg-gray-600 text-white rounded shadow-md hover:bg-gray-700 transition"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveEvent}
+                className="px-4 py-2 bg-gradient-to-r from-green-400 to-teal-500 text-white rounded shadow-md hover:opacity-90 transition"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
