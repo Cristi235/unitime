@@ -19,7 +19,7 @@ type TaskEvent = {
   start: string;
   end?: string;
   extendedProps: {
-    category: string;
+    category?: string;
     weekMode?: "Odd" | "Even" | "Both";
   };
 };
@@ -144,7 +144,8 @@ export default function SchedulePage() {
               right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek",
             }}
             firstDay={1} // Set Monday as the first day of the week
-            dayHeaderClassNames="bg-gray-700 text-gray-200" // Change header background and text color
+            dayHeaderClassNames="bg-gray-700 text-gray-200 border-b border-gray-600" // Add border below the header
+            contentHeight="auto"
             selectable={true}
             editable={true}
             selectMirror={true}
@@ -189,7 +190,6 @@ export default function SchedulePage() {
             }}
             dayMaxEvents={3}
             themeSystem="standard"
-            height="auto"
           />
         </div>
       </div>
@@ -296,13 +296,12 @@ export default function SchedulePage() {
                 value={modalData.extendedProps?.weekMode || "Both"}
                 onChange={(e) =>
                   setModalData((prev) => ({
-                                      ...prev,
-                                      extendedProps: {
-                                        ...prev.extendedProps,
-                                        category: prev.extendedProps?.category || "Activity",
-                                        weekMode: e.target.value as "Odd" | "Even" | "Both",
-                                      },
-                                    }))
+                    ...prev,
+                    extendedProps: {
+                      ...prev.extendedProps,
+                      weekMode: e.target.value as "Odd" | "Even" | "Both",
+                    },
+                  }))
                 }
                 className="w-full px-3 py-2 rounded bg-gray-700 text-white border border-gray-600"
               >
