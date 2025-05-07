@@ -71,7 +71,7 @@ const Navbar = ({ openNav }: Props) => {
   }, []);
 
   const handleLogout = () => {
-    // Aici poți adăuga logica de ștergere a sesiunii sau token-ului, dacă este cazul
+    localStorage.removeItem("token");
     router.push("/");
   };
 

@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Lock, Bell, Globe, EyeOff, Trash2, CheckCircle, AlertCircle } from "lucide-react";
 
 export default function SettingsPage() {
-  // Preferences state
+  
   const [emailNotifs, setEmailNotifs] = useState(true);
   const [pushNotifs, setPushNotifs] = useState(false);
   const [language, setLanguage] = useState("ro");
@@ -19,7 +19,7 @@ export default function SettingsPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [toastIcon, setToastIcon] = useState<JSX.Element | null>(null);
 
-  // Load settings
+  
   useEffect(() => {
     const saved = localStorage.getItem("settings");
     if (saved) {

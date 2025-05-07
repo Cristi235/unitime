@@ -17,7 +17,7 @@ const NotesPage = () => {
   const [filterFavorites, setFilterFavorites] = useState(false);
   const [editIndex, setEditIndex] = useState<number | null>(null);
 
-  // Load notes from local storage on component mount
+  
   useEffect(() => {
     const savedNotes = localStorage.getItem("notesHistory");
     if (savedNotes) {
@@ -25,7 +25,6 @@ const NotesPage = () => {
     }
   }, []);
 
-  // Save notes history to local storage whenever it changes
   useEffect(() => {
     localStorage.setItem("notesHistory", JSON.stringify(notesHistory));
   }, [notesHistory]);
@@ -41,7 +40,6 @@ const NotesPage = () => {
     }
 
     if (editIndex !== null) {
-      // Update existing note
       setNotesHistory((prev) =>
         prev.map((n, i) =>
           i === editIndex

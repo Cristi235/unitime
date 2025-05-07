@@ -5,7 +5,6 @@ import dynamic from "next/dynamic";
 import { v4 as uuidv4 } from "uuid";
 import { FaPlus } from "react-icons/fa";
 
-// Import FullCalendar dynamically
 const FullCalendar = dynamic(() => import("@fullcalendar/react"), { ssr: false });
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
@@ -36,13 +35,13 @@ export default function SchedulePage() {
   const [modalData, setModalData] = useState<Partial<TaskEvent>>({});
   const [categories] = useState(defaultCategories);
 
-  // Load events from localStorage
+  
   useEffect(() => {
     const storedEvents = localStorage.getItem("fcEvents");
     if (storedEvents) setEvents(JSON.parse(storedEvents));
   }, []);
 
-  // Save events to localStorage (debounced)
+  
   useEffect(() => {
     const timeout = setTimeout(() => {
       localStorage.setItem("fcEvents", JSON.stringify(events));
@@ -50,26 +49,26 @@ export default function SchedulePage() {
     return () => clearTimeout(timeout);
   }, [events]);
 
-  // Open activity modal
+  
   const openActivityModal = (eventData: Partial<TaskEvent> = {}) => {
     setModalData(eventData);
     setIsActivityModalOpen(true);
   };
 
-  // Open subject modal
+  
   const openSubjectModal = () => {
     setModalData({});
     setIsSubjectModalOpen(true);
   };
 
-  // Close modals
+  
   const closeModals = () => {
     setModalData({});
     setIsActivityModalOpen(false);
     setIsSubjectModalOpen(false);
   };
 
-  // Save activity or subject
+  
   const saveEvent = () => {
     if (!modalData.title || !modalData.start) {
       alert("Title and start date are required!");
@@ -82,12 +81,12 @@ export default function SchedulePage() {
     }
 
     if (modalData.id) {
-      // Edit existing event
+
       setEvents((prev) =>
         prev.map((ev) => (ev.id === modalData.id ? { ...ev, ...modalData } : ev))
       );
     } else {
-      // Add new event
+      
       setEvents((prev) => [
         ...prev,
         {
@@ -107,7 +106,7 @@ export default function SchedulePage() {
     closeModals();
   };
 
-  // Delete event
+ 
   const deleteEvent = (eventId: string) => {
     if (confirm("Are you sure you want to delete this event?")) {
       setEvents((prev) => prev.filter((ev) => ev.id !== eventId));
@@ -143,8 +142,8 @@ export default function SchedulePage() {
               center: "title",
               right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek",
             }}
-            firstDay={1} // Set Monday as the first day of the week
-            dayHeaderClassNames="bg-gray-700 text-gray-200 border-b border-gray-600" // Add border below the header
+            firstDay={1} 
+            dayHeaderClassNames="bg-gray-700 text-gray-200 border-b border-gray-600"
             contentHeight="auto"
             selectable={true}
             editable={true}

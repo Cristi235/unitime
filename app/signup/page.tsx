@@ -3,6 +3,7 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import axios from "axios"; 
 
 export default function SignupPage() {
   const router = useRouter();
@@ -10,29 +11,46 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [role, setRole] = useState("STUDENT"); 
   const [error, setError] = useState("");
-  const [emailError, setEmailError] = useState("");
 
-  const validateEmail = (email: string) => {
-    const emailRegex =
-      /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$/;
-    return emailRegex.test(email);
-  };
-
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!validateEmail(email)) {
-      setEmailError("Te rog introdu un email valid!");
-      return;
-    }
-    setEmailError("");
+
+    
     if (password !== confirmPassword) {
       setError("Parolele nu se potrivesc!");
       return;
     }
-    setError("");
-    console.log("User signed up with:", username, email);
-    router.push("/dashboard");
+
+    
+    if (!email.endsWith("@student.unitbv.ro")) {
+      setError("Adresa de email trebuie să aibă terminația @student.unitbv.ro.");
+      return;
+    }
+
+    setError(""); 
+
+    try {
+      
+      const response = await axios.post("http://localhost:8080/api/auth/register", {
+        username,
+        email,
+        password,
+        role,
+      });
+
+      // Verifică dacă răspunsul este OK
+      if (response.status === 200) {
+        console.log("Signup successful:", response.data);
+        alert(response.data.message || "Înregistrare reușită. Verifică-ți emailul pentru a confirma contul.");
+        router.push("/login");
+      }
+    } catch (err) {
+      // În cazul unui error, afișează mesajul corespunzător
+      setError("A apărut o eroare. Te rugăm să încerci din nou.");
+      console.error(err);
+    }
   };
 
   return (
@@ -93,9 +111,26 @@ export default function SignupPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
             />
-            {emailError && (
-              <p className="text-red-500 text-sm mt-2">{emailError}</p>
-            )}
+          </div>
+
+          <div>
+            <label
+              htmlFor="role"
+              className="block text-sm font-medium text-gray-200"
+            >
+              Rol
+            </label>
+            <select
+              id="role"
+              className="mt-2 p-3 w-full rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              required
+            >
+              <option value="STUDENT">Student</option>
+              <option value="PROFESSOR">Profesor</option>
+              <option value="ADMIN">Admin</option>
+            </select>
           </div>
 
           <div>
@@ -127,20 +162,16 @@ export default function SignupPage() {
               id="confirmPassword"
               className="mt-2 p-3 w-full rounded-lg bg-gray-700 border border-gray-600 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
               value={confirmPassword}
-              onChange={(e) =>
-                setConfirmPassword(e.target.value)
-              }
+              onChange={(e) => setConfirmPassword(e.target.value)}
               required
             />
           </div>
 
-          {error && (
-            <p className="text-red-500 text-sm">{error}</p>
-          )}
+          {error && <p className="text-red-500 text-sm">{error}</p>}
 
           <motion.button
             type="submit"
-            className="w-full py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-xl font-medium shadow-lg hover:opacity-90 transition"
+            className="w-full py-3 bg-gradient-to-r from-purple-500 to-blue-500 text-white rounded-xl font-medium shadow-lg hover:opacity-90 transition cursor-pointer"
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
           >
@@ -149,16 +180,10 @@ export default function SignupPage() {
         </form>
 
         <div className="mt-6 flex justify-center text-sm text-gray-400 space-x-4">
-          <Link
-            href="/login"
-            className="hover:text-white transition"
-          >
+          <Link href="/login" className="hover:text-white transition">
             Am deja cont
           </Link>
-          <Link
-            href="/forgot-password"
-            className="hover:text-white transition"
-          >
+          <Link href="/forgot-password" className="hover:text-white transition">
             Ai uitat parola?
           </Link>
         </div>

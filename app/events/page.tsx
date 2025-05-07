@@ -99,7 +99,7 @@ const EventsPage = () => {
     ],
   };
 
-  // Filtrare titluri după query
+  // Filtrare titluri 
   const filtered = (activeTab === "events"
     ? sections.events
     : sections.jobs
@@ -107,7 +107,7 @@ const EventsPage = () => {
     item.title.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  // Paginate
+  
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginatedItems = filtered.slice(
     (currentPage - 1) * itemsPerPage,

@@ -1,8 +1,9 @@
 "use client";
 
-import { usePathname } from "next/navigation";
-import { ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { ReactNode, useEffect } from "react";
 import ResponsiveNavbar from "@/components/Home/Navbar/ResponsiveNavbar";
+import { useUser } from "./context/UserContext";
 
 export default function LayoutWrapper({
   children,
@@ -12,12 +13,23 @@ export default function LayoutWrapper({
   className?: string;
 }) {
   const pathname = usePathname();
-  const hideNavbar = ["/", "/login", "/signup", "/forgot-password"].includes(pathname);
+  const router = useRouter();
+  const { user } = useUser();
+
+  const publicRoutes = ["/", "/login", "/signup", "/forgot-password"];
+  const isPublicRoute = publicRoutes.includes(pathname);
+  const hideNavbar = isPublicRoute;
+
+  useEffect(() => {
+    if (!user && !isPublicRoute) {
+      router.push("/login");
+    }
+  }, [user, isPublicRoute, router]);
 
   return (
     <>
       {!hideNavbar && <ResponsiveNavbar />}
-      <main className={className}>{children}</main> {/* Asigură-te că conținutul fiecărei pagini se află aici */}
+      <main className={className}>{children}</main>
     </>
   );
 }

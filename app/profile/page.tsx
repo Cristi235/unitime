@@ -15,8 +15,7 @@ export default function ProfilePage() {
     email: "andrei123@email.com",
     university: "Universitatea Transilvania",
     phone: "+40",
-    about:
-      "about",
+    about: "about",
     photo: defaultPhoto,
     cover: defaultCover,
   });
@@ -24,39 +23,124 @@ export default function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [savedMessage, setSavedMessage] = useState(false);
 
+  const loadLocalData = () => {
+    const stored = localStorage.getItem("localUserProfile");
+    if (stored) {
+      setUserData(JSON.parse(stored));
+    }
+  };
+
+  const saveToLocalStorage = (data: typeof userData) => {
+    localStorage.setItem("localUserProfile", JSON.stringify(data));
+  };
+
   useEffect(() => {
-    const savedPhoto = localStorage.getItem("profilePhoto");
-    const savedCover = localStorage.getItem("coverPhoto");
-    if (savedPhoto) {
-      setUserData((prev) => ({ ...prev, photo: savedPhoto }));
-    }
-    if (savedCover) {
-      setUserData((prev) => ({ ...prev, cover: savedCover }));
-    }
+    const fetchUserProfile = async () => {
+      try {
+        const response = await fetch("/api/profile", {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("userToken")}`,
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setUserData(data);
+          saveToLocalStorage(data);
+        } else {
+          console.warn("Serverul nu a răspuns. Se folosește localStorage.");
+          loadLocalData();
+        }
+      } catch (error) {
+        console.error("Eroare la obținerea profilului:", error);
+        loadLocalData();
+      }
+    };
+
+    fetchUserProfile();
   }, []);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setEditing(false);
     setSavedMessage(true);
     setTimeout(() => setSavedMessage(false), 3000);
+
+    const updatedProfile = {
+      fullName: userData.fullName,
+      username: userData.username,
+      email: userData.email,
+      phone: userData.phone,
+      university: userData.university,
+      about: userData.about,
+      photo: userData.photo,
+      cover: userData.cover,
+    };
+
+    saveToLocalStorage(updatedProfile);
+
+    try {
+      const response = await fetch("/api/profile/update", {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("userToken")}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(updatedProfile),
+      });
+
+      if (!response.ok) {
+        throw new Error("Eroare la actualizarea profilului");
+      }
+      const data = await response.json();
+      console.log(data.message);
+    } catch (error) {
+      console.warn("Salvarea s-a făcut doar local:", error);
+    }
   };
 
-  const handleImageChange = (
+  const handleImageChange = async (
     e: React.ChangeEvent<HTMLInputElement>,
     type: "photo" | "cover"
   ) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const newImage = event.target?.result as string;
-        setUserData((prev) => ({ ...prev, [type]: newImage }));
-        localStorage.setItem(
-          type === "photo" ? "profilePhoto" : "coverPhoto",
-          newImage
-        );
-      };
-      reader.readAsDataURL(file);
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("type", type);
+
+      try {
+        const response = await fetch(`/api/profile/upload-${type}`, {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("userToken")}`,
+          },
+          body: formData,
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          setUserData((prev) => {
+            const updated = { ...prev, [type]: data.url };
+            saveToLocalStorage(updated);
+            return updated;
+          });
+        } else {
+          throw new Error("Upload eșuat");
+        }
+      } catch (error) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          if (reader.result) {
+            setUserData((prev) => {
+              const updated = { ...prev, [type]: reader.result as string };
+              saveToLocalStorage(updated);
+              return updated;
+            });
+          }
+        };
+        reader.readAsDataURL(file);
+      }
     }
   };
 
@@ -117,7 +201,9 @@ export default function ProfilePage() {
             )}
           </div>
           <div>
-            <h1 className="text-3xl font-extrabold text-white">{userData.fullName}</h1>
+            <h1 className="text-3xl font-extrabold text-white">
+              {userData.fullName}
+            </h1>
             <p className="text-zinc-400">@{userData.username}</p>
           </div>
         </div>
